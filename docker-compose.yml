@@ -1,7 +1,17 @@
 version: '2' 
 services:
-  postgres:
-    image: postgres:9.3
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+  db:
+    image: postgres:14.8
     ports:
     - "5432:5432"
-  command: node app.js
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=urbantidedb
+
