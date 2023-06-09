@@ -10,7 +10,8 @@ const port = 8000;
 const { Pool } = require('pg');
 
 const pool = new Pool({
-  host: 'localhost', // change to 'db' from docker-compose.yml
+  host: 'db', // change to 'db' from docker-compose.yml
+  user: "postgres", 
   password: 'password',
   database: 'urbantidedb',
   port: 5432,
