@@ -10,22 +10,11 @@ const port = 8000;
 const { Pool } = require('pg');
 
 const pool = new Pool({
-  host: 'db', // service name from docker-compose.yml
-//   password: 'password',
-//   database: 'urbantidedb',
-//   port: 5432,
+  host: 'localhost', // change to 'db' from docker-compose.yml
+  password: 'password',
+  database: 'urbantidedb',
+  port: 5432,
 });
-
-// const createDbQuery = 'CREATE DATABASE UrbanTideDB';
-    
-// pool.query(createDbQuery, (err, result) => {
-//       if (err) {
-//             console.error('Error creating database:', err);
-
-//       } else {
-//             console.log('Database created successfully');
-//       }
-// });
 
 
 app.use(express.json());
@@ -49,33 +38,34 @@ app.post('/upload', upload.single('csvFile'), (req, res) => {
       .on('end', async () => {
             const outliers = [];
             const threshold = 2;
-            for(let i in results) {
-                  outliers.push(parseFloat(results[i].value));
+            for(let i = 1; i < results.length; i++) {
+                  outliers.push(parseFloat(results[i]._1));
             };
-
             const mean_ = math.mean(outliers)
             const std_ = math.std(outliers)
 
             z_score = outliers.filter((i) => (i - mean_)/std_ > threshold);
-
+            
             if(z_score.length != 0) {
-                  console.log(z_score);
                   res.send({
                         message: 'contains outliers'
                   });
             }
-            else{
-                  const columns = Object.keys(results[0]).map((column) => 
-                        column.trim()
-                  );
+            else {
+                  const headerRow = Object.keys(results[0]);
+                  const columns = headerRow.map((column) => column.trim());
+                  console.log('headerRow', headerRow)
+       
                   const dropTableQuery = `DROP TABLE IF EXISTS urbantidetable`;
-
+                  
                   const createTableQuery = `
                         CREATE TABLE urbantidetable (
                               id SERIAL PRIMARY KEY, 
                               ${columns.map((column) => `"${column}" TEXT`)
                               .join(',\n')}
                         )`;
+
+                  results.shift();
 
                   try {
                         await pool.query(dropTableQuery);
@@ -88,8 +78,8 @@ app.post('/upload', upload.single('csvFile'), (req, res) => {
                               const values = columns.map((column) => `'${row[column]}'`).join(', ');
                               const insertRowQuery = `INSERT INTO urbantidetable (${columns.join(', ')}) VALUES (${values})`;
                               await pool.query(insertRowQuery);
-                              console.log('Row inserted successfully');
                         }
+                        console.log('Rows inserted successfully');
                         res.send({
                               data: results,
                         });
